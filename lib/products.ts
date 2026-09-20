@@ -60,7 +60,7 @@ export const categories: Category[] = [
 
 export const products: Product[] = [
   {
-    id: "p-01",
+    id: "7799298d-0114-588a-9be3-9f24cc17bd80",
     slug: "samsung-galaxy-s24-ultra",
     name: "Samsung Galaxy S24 Ultra",
     brand: "Samsung",
@@ -85,7 +85,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-02",
+    id: "64df3fbb-95d5-558b-9dc5-ffc79a03b400",
     slug: "apple-iphone-15-pro",
     name: "Apple iPhone 15 Pro",
     brand: "Apple",
@@ -109,7 +109,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-03",
+    id: "31e0bdc4-8f1d-5dca-b663-f5235d2baee4",
     slug: "xiaomi-redmi-note-13-pro",
     name: "Xiaomi Redmi Note 13 Pro",
     brand: "Xiaomi",
@@ -134,7 +134,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-04",
+    id: "b9a5dc1c-01e9-551b-acce-e54608f54691",
     slug: "google-pixel-8",
     name: "Google Pixel 8",
     brand: "Google",
@@ -157,7 +157,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-05",
+    id: "937309e2-73af-52a9-a7da-f6adb90187bc",
     slug: "realme-12-pro-plus",
     name: "Realme 12 Pro+",
     brand: "Realme",
@@ -181,7 +181,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-06",
+    id: "9f33c92c-dade-51cb-ae8e-61466e1313ad",
     slug: "samsung-galaxy-a55",
     name: "Samsung Galaxy A55 5G",
     brand: "Samsung",
@@ -204,7 +204,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-07",
+    id: "c2e160b4-0d30-5581-b6e5-3051b41d52e1",
     slug: "apple-airpods-pro-2",
     name: "Apple AirPods Pro (2nd gen)",
     brand: "Apple",
@@ -229,7 +229,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-08",
+    id: "bb6a3075-deae-55bd-b474-882546faaaa2",
     slug: "jbl-tune-buds",
     name: "JBL Tune Buds",
     brand: "JBL",
@@ -253,7 +253,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-09",
+    id: "8caa728b-6bd2-579a-aaee-ee0a9dce5aa1",
     slug: "anker-powercore-20000",
     name: "Anker PowerCore 20000mAh",
     brand: "Anker",
@@ -276,7 +276,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-10",
+    id: "8e252b4e-6b00-5f36-a5f9-d9f2de9a2290",
     slug: "samsung-25w-charger",
     name: "Samsung 25W USB-C Charger",
     brand: "Samsung",
@@ -299,7 +299,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-11",
+    id: "74fe4d3a-c077-5fcc-8d57-7ce86ae68a45",
     slug: "spigen-rugged-armor-s24",
     name: "Spigen Rugged Armor Case (S24 Ultra)",
     brand: "Spigen",
@@ -321,7 +321,7 @@ export const products: Product[] = [
     ],
   },
   {
-    id: "p-12",
+    id: "9f502b5e-3150-5a98-9ae1-b95ac7c1c1d9",
     slug: "baseus-usb-c-cable-100w",
     name: "Baseus 100W USB-C Cable (1m)",
     brand: "Baseus",
