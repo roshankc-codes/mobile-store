@@ -18,8 +18,16 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
+  : process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? new URL(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`)
+  : process.env.VERCEL_URL
+  ? new URL(`https://${process.env.VERCEL_URL}`)
+  : new URL("http://localhost:3000")
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://himal-mobile.example"),
+  metadataBase: siteUrl,
   title: {
     default: "Himal Mobile — Phones & Accessories in Nepal",
     template: "%s · Himal Mobile",
@@ -34,7 +42,6 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_NP",
   },
-  generator: "v0.app",
 }
 
 export const viewport: Viewport = {
