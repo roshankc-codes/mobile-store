@@ -43,6 +43,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { updateAdminOrderStatusAction } from "./actions"
 
 interface OrderItem {
   id: string
@@ -346,16 +347,17 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
     }
 
     setIsSubmittingAction(true)
-    const supabase = createClient()
 
     try {
-      const { error: rpcErr } = await supabase.rpc("update_order_status", {
-        p_order_id: order.id,
-        p_new_status: selectedNextStatus,
-        p_note: actionNote.trim() || undefined,
-      })
+      const res = await updateAdminOrderStatusAction(
+        order.id,
+        selectedNextStatus,
+        actionNote.trim() || undefined
+      )
 
-      if (rpcErr) throw rpcErr
+      if (!res.success) {
+        throw new Error(res.error || "Status update failed.")
+      }
 
       toast.success("Order status updated successfully", {
         description: `Status changed to ${selectedNextStatus}`,
