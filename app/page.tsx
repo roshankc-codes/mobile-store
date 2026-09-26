@@ -1,12 +1,15 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
-import { products } from "@/lib/products"
+import { getLiveProducts } from "@/lib/products.server"
 import { StoreShell } from "@/components/store/store-shell"
 import { Hero } from "@/components/store/home/hero"
 import { CategoryTiles } from "@/components/store/home/category-tiles"
 import { ProductGrid } from "@/components/store/product-grid"
 
-export default function HomePage() {
+export const dynamic = "force-dynamic"
+
+export default async function HomePage() {
+  const products = await getLiveProducts()
   const featured = products.filter((p) => p.featured)
   const deals = products.filter((p) => p.originalPrice).slice(0, 4)
 

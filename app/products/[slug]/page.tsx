@@ -1,7 +1,8 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getCategory, getProduct, getRelatedProducts, products } from "@/lib/products"
+import { getCategory, getProduct, products } from "@/lib/products"
+import { getLiveProduct, getLiveRelatedProducts } from "@/lib/products.server"
 import { StoreShell } from "@/components/store/store-shell"
 import { ProductDetail } from "@/components/store/product-detail"
 import { ProductGrid } from "@/components/store/product-grid"
@@ -13,6 +14,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+
+export const dynamic = "force-dynamic"
 
 export function generateStaticParams() {
   return products.map((p) => ({ slug: p.slug }))
@@ -35,11 +38,11 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const product = getProduct(slug)
+  const product = await getLiveProduct(slug)
   if (!product) notFound()
 
   const category = getCategory(product.category)
-  const related = getRelatedProducts(product)
+  const related = await getLiveRelatedProducts(product)
 
   return (
     <StoreShell>

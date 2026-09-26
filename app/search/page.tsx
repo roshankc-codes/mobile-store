@@ -1,22 +1,17 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { SearchX } from "lucide-react"
-import { products } from "@/lib/products"
+import { searchLiveProducts } from "@/lib/products.server"
 import { StoreShell } from "@/components/store/store-shell"
 import { ProductListing } from "@/components/store/product-listing"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 
+export const dynamic = "force-dynamic"
+
 export const metadata: Metadata = {
   title: "Search",
   description: "Search phones and accessories at Himal Mobile.",
-}
-
-function match(query: string) {
-  const q = query.toLowerCase()
-  return products.filter((p) =>
-    [p.name, p.brand, p.description, ...p.highlights].join(" ").toLowerCase().includes(q),
-  )
 }
 
 export default async function SearchPage({
@@ -26,7 +21,7 @@ export default async function SearchPage({
 }) {
   const { q } = await searchParams
   const query = (q ?? "").trim()
-  const results = query ? match(query) : []
+  const results = query ? await searchLiveProducts(query) : []
 
   return (
     <StoreShell>

@@ -11,6 +11,7 @@ import { QuantityStepper } from "@/components/store/quantity-stepper"
 import { OrderSummary } from "@/components/store/order-summary"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -87,6 +88,13 @@ export default function CartPage() {
                           >
                             {line.product.name}
                           </Link>
+                          {line.product.stock <= 0 && (
+                            <div className="mt-1">
+                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 font-normal">
+                                Sold out / Out of stock
+                              </Badge>
+                            </div>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -124,7 +132,21 @@ export default function CartPage() {
                   <OrderSummary subtotal={subtotal} />
                 </CardContent>
                 <CardFooter className="flex-col gap-3">
-                  <Button size="lg" className="w-full" render={<Link href="/checkout" />}>
+                  {lines.some((l) => l.product.stock <= 0) && (
+                    <p className="w-full text-center text-xs font-medium text-destructive">
+                      Please remove out-of-stock items to continue to checkout.
+                    </p>
+                  )}
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    disabled={lines.some((l) => l.product.stock <= 0 || l.quantity > l.product.stock)}
+                    render={
+                      lines.some((l) => l.product.stock <= 0 || l.quantity > l.product.stock) ? undefined : (
+                        <Link href="/checkout" />
+                      )
+                    }
+                  >
                     Checkout
                     <ArrowRight data-icon="inline-end" />
                   </Button>

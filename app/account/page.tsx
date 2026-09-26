@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Phone,
   ShieldCheck,
@@ -123,13 +124,18 @@ function getPaymentBadge(method: string, status: string) {
   )
 }
 
-export default function AccountPage() {
+function AccountContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [tab, setTab] = useState("signin")
   const [user, setUser] = useState<User | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isResolvingAuth, setIsResolvingAuth] = useState(true)
   const [orders, setOrders] = useState<CustomerOrder[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [ordersError, setOrdersError] = useState<string | null>(null)
+  const isLoggingInRef = useRef(false)
 
   const fetchOrders = useCallback(async () => {
     setLoadingOrders(true)
@@ -167,32 +173,103 @@ export default function AccountPage() {
   }, [])
 
   useEffect(() => {
+    let isMounted = true
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
-      if (data.user) {
-        fetchOrders()
+
+    async function checkInitialAuth() {
+      try {
+        const { data } = await supabase.auth.getUser()
+        if (!isMounted) return
+
+        if (data.user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user.id)
+            .maybeSingle()
+
+          if (!isMounted) return
+          const role = profile?.role || "customer"
+
+          if (role === "staff" || role === "owner") {
+            const redirectParam = searchParams.get("redirect")
+            const target =
+              redirectParam && redirectParam.startsWith("/admin") && !redirectParam.startsWith("//")
+                ? redirectParam
+                : "/admin"
+            router.replace(target)
+            return // Keep isResolvingAuth true to avoid rendering customer UI during redirect
+          }
+
+          setUser(data.user)
+          setUserRole(role)
+          setIsResolvingAuth(false)
+          fetchOrders()
+        } else {
+          setUser(null)
+          setUserRole(null)
+          setIsResolvingAuth(false)
+        }
+      } catch (err) {
+        console.error("Error checking auth:", err)
+        if (isMounted) setIsResolvingAuth(false)
       }
-    })
+    }
+
+    checkInitialAuth()
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return
+      if (isLoggingInRef.current) {
+        // Form submission redirect is in progress; skip updating local user state to prevent flash
+        return
+      }
+
       if (session?.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .maybeSingle()
+
+        if (!isMounted) return
+        const role = profile?.role || "customer"
+
+        if (role === "staff" || role === "owner") {
+          const redirectParam = searchParams.get("redirect")
+          const target =
+            redirectParam && redirectParam.startsWith("/admin") && !redirectParam.startsWith("//")
+              ? redirectParam
+              : "/admin"
+          router.replace(target)
+          return
+        }
+
+        setUser(session.user)
+        setUserRole(role)
+        setIsResolvingAuth(false)
         fetchOrders()
       } else {
+        setUser(null)
+        setUserRole(null)
         setOrders([])
+        setIsResolvingAuth(false)
       }
     })
 
-    return () => subscription.unsubscribe()
-  }, [fetchOrders])
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [fetchOrders, router, searchParams])
 
   async function handleSubmit(e: React.FormEvent, kind: "signin" | "register") {
     e.preventDefault()
     const form = e.currentTarget as HTMLFormElement
     const supabase = createClient()
+    isLoggingInRef.current = true
     setLoading(true)
 
     try {
@@ -204,11 +281,51 @@ export default function AccountPage() {
 
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) {
+          isLoggingInRef.current = false
           toast.error("Sign in failed", { description: error.message })
-        } else {
-          setUser(data.user)
-          toast.success("Signed in successfully", { description: `Welcome back, ${data.user?.email}` })
+          setLoading(false)
+          return
         }
+
+        // Fetch authenticated user's profile role BEFORE setting user state
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", data.user.id)
+          .maybeSingle()
+
+        const role = profile?.role || "customer"
+
+        if (role === "staff" || role === "owner") {
+          toast.success("Signed in successfully", { description: `Welcome back, ${data.user?.email}` })
+          const redirectParam = searchParams.get("redirect")
+          const target =
+            redirectParam && redirectParam.startsWith("/admin") && !redirectParam.startsWith("//")
+              ? redirectParam
+              : "/admin"
+          // Keep loading true and redirect immediately without rendering customer account UI
+          router.replace(target)
+          router.refresh()
+          return
+        }
+
+        // Customer sign-in: redirect to "/" (or safe non-admin internal redirectParam like /checkout)
+        toast.success("Signed in successfully", { description: `Welcome back, ${data.user?.email}` })
+
+        const redirectParam = searchParams.get("redirect")
+        const isSafeInternalNonAdmin =
+          redirectParam &&
+          redirectParam.startsWith("/") &&
+          !redirectParam.startsWith("//") &&
+          !redirectParam.startsWith("/admin") &&
+          redirectParam !== "/account"
+
+        const target = isSafeInternalNonAdmin ? redirectParam : "/"
+
+        // Keep loading true and redirect immediately without rendering customer account dashboard
+        router.replace(target)
+        router.refresh()
+        return
       } else {
         const nameInput = form.querySelector("#reg-name") as HTMLInputElement
         const emailInput = form.querySelector("#reg-email") as HTMLInputElement
@@ -223,14 +340,22 @@ export default function AccountPage() {
           options: { data: { full_name: fullName } },
         })
         if (error) {
+          isLoggingInRef.current = false
           toast.error("Registration failed", { description: error.message })
-        } else {
-          setUser(data.user)
-          toast.success("Account created successfully", { description: `Signed up as ${data.user?.email}` })
+          setLoading(false)
+          return
         }
+
+        toast.success("Account created successfully", { description: `Signed up as ${data.user?.email}` })
+        router.replace("/")
+        router.refresh()
+        return
       }
-    } finally {
+    } catch (err: unknown) {
+      isLoggingInRef.current = false
       setLoading(false)
+      const msg = err instanceof Error ? err.message : "Authentication failed"
+      toast.error(msg)
     }
   }
 
@@ -238,8 +363,22 @@ export default function AccountPage() {
     const supabase = createClient()
     await supabase.auth.signOut()
     setUser(null)
+    setUserRole(null)
     setOrders([])
     toast.success("Signed out successfully")
+  }
+
+  if (isResolvingAuth) {
+    return (
+      <StoreShell>
+        <div className="mx-auto flex max-w-md flex-col items-center justify-center gap-4 px-4 py-24 text-center">
+          <span className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <RefreshCw className="size-5 animate-spin" />
+          </span>
+          <p className="text-sm text-muted-foreground">Loading account...</p>
+        </div>
+      </StoreShell>
+    )
   }
 
   return (
@@ -274,6 +413,11 @@ export default function AccountPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {(userRole === "staff" || userRole === "owner") && (
+                    <Button variant="default" size="sm" render={<Link href="/admin" />}>
+                      Staff Portal
+                    </Button>
+                  )}
                   <Button variant="outline" size="sm" render={<Link href="/products" />}>
                     Browse products
                   </Button>
@@ -484,5 +628,13 @@ export default function AccountPage() {
         )}
       </div>
     </StoreShell>
+  )
+}
+
+export default function AccountPage() {
+  return (
+    <Suspense fallback={null}>
+      <AccountContent />
+    </Suspense>
   )
 }

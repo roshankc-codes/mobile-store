@@ -2,14 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Package, ShoppingCart, Users, ArrowLeft } from "lucide-react"
+import { LayoutDashboard, ShoppingCart, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/admin/customers", label: "Customers", icon: Users },
 ]
 
 export function AdminNav() {
@@ -18,7 +16,7 @@ export function AdminNav() {
   return (
     <nav className="flex flex-col gap-1" aria-label="Admin navigation">
       {links.map((link) => {
-        const active = pathname === link.href
+        const active = link.href === "/admin" ? pathname === "/admin" : pathname.startsWith(link.href)
         return (
           <Link
             key={link.href}

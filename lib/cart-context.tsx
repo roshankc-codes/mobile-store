@@ -19,6 +19,7 @@ type CartAction =
   | { type: "add"; product: Product; quantity: number }
   | { type: "setQuantity"; productId: string; quantity: number }
   | { type: "remove"; productId: string }
+  | { type: "updateStock"; stockMap: Record<string, number> }
   | { type: "clear" }
 
 const STORAGE_KEY = "himal-cart-v1"
@@ -28,9 +29,14 @@ function reducer(state: CartState, action: CartAction): CartState {
     case "hydrate":
       return { lines: action.lines, hydrated: true }
     case "add": {
+      if (action.product.stock <= 0) {
+        return state
+      }
       const existing = state.lines.find((l) => l.product.id === action.product.id)
       const currentQty = existing?.quantity ?? 0
       const nextQty = Math.min(currentQty + action.quantity, action.product.stock)
+      if (nextQty <= 0) return state
+
       const lines = existing
         ? state.lines.map((l) => (l.product.id === action.product.id ? { ...l, quantity: nextQty } : l))
         : [...state.lines, { product: action.product, quantity: Math.min(action.quantity, action.product.stock) }]
@@ -44,6 +50,22 @@ function reducer(state: CartState, action: CartAction): CartState {
             : l,
         )
         .filter((l) => l.quantity > 0)
+      return { ...state, lines }
+    }
+    case "updateStock": {
+      const lines = state.lines.map((l) => {
+        if (action.stockMap[l.product.id] !== undefined) {
+          const newStock = action.stockMap[l.product.id]
+          return {
+            ...l,
+            product: {
+              ...l.product,
+              stock: newStock,
+            },
+          }
+        }
+        return l
+      })
       return { ...state, lines }
     }
     case "remove":
@@ -63,6 +85,7 @@ interface CartContextValue {
   addItem: (product: Product, quantity?: number) => void
   setQuantity: (productId: string, quantity: number) => void
   removeItem: (productId: string) => void
+  refreshStock: () => Promise<void>
   clear: () => void
 }
 
@@ -90,6 +113,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.lines, state.hydrated])
 
+  const refreshStock = async () => {
+    try {
+      const res = await fetch("/api/stock")
+      if (res.ok) {
+        const json = await res.json()
+        if (json.success && json.stock) {
+          dispatch({ type: "updateStock", stockMap: json.stock })
+        }
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }
+
+  // Fetch live stock on mount and on window focus
+  useEffect(() => {
+    if (!state.hydrated) return
+    refreshStock()
+
+    const onFocus = () => refreshStock()
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [state.hydrated])
+
   const value = useMemo<CartContextValue>(() => {
     const itemCount = state.lines.reduce((sum, l) => sum + l.quantity, 0)
     const subtotal = state.lines.reduce((sum, l) => sum + l.quantity * l.product.price, 0)
@@ -98,9 +145,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       hydrated: state.hydrated,
       itemCount,
       subtotal,
-      addItem: (product, quantity = 1) => dispatch({ type: "add", product, quantity }),
+      addItem: (product, quantity = 1) => {
+        if (product.stock <= 0) return
+        dispatch({ type: "add", product, quantity })
+      },
       setQuantity: (productId, quantity) => dispatch({ type: "setQuantity", productId, quantity }),
       removeItem: (productId) => dispatch({ type: "remove", productId }),
+      refreshStock,
       clear: () => dispatch({ type: "clear" }),
     }
   }, [state])
